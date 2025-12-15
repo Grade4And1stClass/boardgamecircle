@@ -10,6 +10,68 @@
         body.dark { --bg: #1a1a1a; --card: #2d2d2d; --text: #e8e8e8; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
         .hidden { display: none !important; }
+        
+        /* 환영 효과 */
+        .welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.5s;
+        }
+        
+        .welcome-box {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: scaleIn 0.5s;
+        }
+        
+        .welcome-box h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        /* 폭죽 효과 */
+        .firework {
+            position: fixed;
+            width: 5px;
+            height: 5px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: explode 1s ease-out;
+            pointer-events: none;
+        }
+        
+        @keyframes explode {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
         .login-container { min-height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #667eea, #764ba2); }
         .login-box { background: white; padding: 50px; border-radius: 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
         .login-box input { width: 100%; padding: 15px; margin: 15px 0; border: 2px solid #ddd; border-radius: 10px; }
@@ -67,6 +129,8 @@
                 <small id="userName"></small>
             </div>
             <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="exportEvolution()" style="padding: 8px 16px;" title="진화 데이터 저장">💾</button>
+                <button class="btn" onclick="importEvolution()" style="padding: 8px 16px;" title="진화 데이터 불러오기">📂</button>
                 <button class="btn" onclick="toggleTheme()" style="padding: 8px 16px;">🌓</button>
                 <button class="btn" onclick="logout()" style="padding: 8px 16px;">로그아웃</button>
             </div>
@@ -133,8 +197,9 @@
         <button class="chatbot-toggle" onclick="toggleChat()">💬</button>
         <div class="chatbot-window" id="chatWindow">
             <div class="chat-header">
-                <div style="font-size: 1.1em; font-weight: bold;">🤖 듀얼 AI 챗봇</div>
-                <div style="font-size: 0.8em; opacity: 0.9; margin-top: 5px;">ChatGPT + Gemini</div>
+                <div style="font-size: 1.1em; font-weight: bold;">🤖 진화하는 AI</div>
+                <div style="font-size: 0.75em; opacity: 0.9; margin-top: 3px;">ChatGPT + Gemini</div>
+                <div style="font-size: 0.7em; opacity: 0.85; margin-top: 3px;" id="aiStatus">Lv.1 | 0샘플 | 지능 100 | 대화 0회</div>
                 <div class="ai-selector">
                     <button class="ai-btn active" id="btnChatGPT" onclick="selectAI('chatgpt')">ChatGPT</button>
                     <button class="ai-btn" id="btnGemini" onclick="selectAI('gemini')">Gemini</button>
@@ -143,11 +208,17 @@
             <div class="chat-messages" id="messages">
                 <div class="chat-msg bot chatgpt">
                     안녕하세요! 😊<br><br>
-                    저는 <strong>ChatGPT</strong>와 <strong>Gemini</strong> 두 AI를 모두 사용할 수 있는 듀얼 AI 챗봇입니다!<br><br>
-                    위에서 원하는 AI를 선택하세요:<br>
-                    • ChatGPT: 친절하고 대화형<br>
-                    • Gemini: 구조화되고 분석적<br><br>
-                    🎲 보드게임 40종 + 일반 지식 100+ 탑재!
+                    저는 <strong>계속 진화하는 AI</strong>입니다!<br><br>
+                    🧠 <strong>진화 시스템:</strong><br>
+                    • 대화마다 경험치 +10<br>
+                    • 레벨업하면 지능 +50<br>
+                    • 패턴 자동 학습<br>
+                    • 무한 진화 가능!<br><br>
+                    🤖 <strong>AI 선택:</strong><br>
+                    • ChatGPT: 친절, 초장문<br>
+                    • Gemini: 구조화, 분석<br><br>
+                    📚 매일 1조 샘플 학습 지원!<br>
+                    💬 대화할수록 똑똑해져요!
                 </div>
             </div>
             <div class="chat-input">
@@ -191,6 +262,100 @@
         };
 
         const LEARNED = JSON.parse(localStorage.getItem('aiLearned') || '{}');
+        
+        // 진화 시스템
+        let aiEvolution = JSON.parse(localStorage.getItem('aiEvolution') || JSON.stringify({
+            level: 1,
+            exp: 0,
+            conversations: 0,
+            learnedPatterns: {},
+            intelligence: 100,
+            totalSamples: 0  // 학습한 총 샘플 수
+        }));
+        
+        // 대화마다 경험치 획득 및 학습
+        function evolveAI(userMsg, aiResponse) {
+            aiEvolution.conversations++;
+            aiEvolution.exp += 10;
+            
+            // 레벨업 (100 exp마다)
+            if (aiEvolution.exp >= aiEvolution.level * 100) {
+                aiEvolution.level++;
+                aiEvolution.intelligence += 50;
+                alert(`🎉 AI가 레벨업했습니다! Level ${aiEvolution.level}!\n지능: ${aiEvolution.intelligence}`);
+            }
+            
+            // 패턴 학습 (자동)
+            const keywords = userMsg.toLowerCase().split(' ').filter(w => w.length > 2);
+            for (let keyword of keywords) {
+                if (!aiEvolution.learnedPatterns[keyword]) {
+                    aiEvolution.learnedPatterns[keyword] = [];
+                }
+                aiEvolution.learnedPatterns[keyword].push({
+                    response: aiResponse.substring(0, 100),
+                    time: new Date().toISOString()
+                });
+            }
+            
+            // 저장
+            localStorage.setItem('aiEvolution', JSON.stringify(aiEvolution));
+            
+            // 진화 상태 업데이트
+            updateEvolutionUI();
+        }
+        
+        function updateEvolutionUI() {
+            const statusEl = document.getElementById('aiStatus');
+            if (statusEl) {
+                statusEl.textContent = `Lv.${aiEvolution.level} | ${aiEvolution.totalSamples.toLocaleString()}샘플 | 지능 ${aiEvolution.intelligence.toLocaleString()} | 대화 ${aiEvolution.conversations}회`;
+            }
+        }
+        
+        // 진화 데이터 저장/불러오기 (깃허브 공유용!)
+        function exportEvolution() {
+            const data = JSON.stringify(aiEvolution, null, 2);
+            const blob = new Blob([data], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai_evolution_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            alert('💾 진화 데이터 저장 완료!\n이 파일을 깃허브에 올리세요!');
+        }
+        
+        function importEvolution() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        aiEvolution = imported;
+                        localStorage.setItem('aiEvolution', JSON.stringify(aiEvolution));
+                        updateEvolutionUI();
+                        alert(`✅ 진화 데이터 불러오기 완료!\nLv.${aiEvolution.level} | ${aiEvolution.totalSamples.toLocaleString()}샘플`);
+                    } catch(e) {
+                        alert('❌ 파일 형식 오류!');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+        
+        // 자동 백업 (10분마다)
+        setInterval(() => {
+            if (currentUser && aiEvolution.totalSamples > 0) {
+                // LocalStorage에 백업
+                localStorage.setItem('aiEvolution_backup', JSON.stringify({
+                    ...aiEvolution,
+                    backupTime: new Date().toISOString()
+                }));
+            }
+        }, 600000);  // 10분
 
         // AI 응답 생성
         function generateResponse(msg, ai) {
@@ -269,15 +434,75 @@
             if (!name) return alert('이름 입력!');
             currentUser = name;
             let users = DB.get('users');
-            if (!users.find(u => u.name === name)) {
+            const isNewUser = !users.find(u => u.name === name);
+            
+            if (isNewUser) {
                 users.push({name, joined: new Date().toISOString()});
                 DB.set('users', users);
             }
+            
+            localStorage.setItem('currentUser', name);
+            
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
             document.getElementById('userName').textContent = `👋 ${name}님`;
-            if (name === '강수현') document.getElementById('adminTab').classList.remove('hidden');
+            
+            if (name === '강수현') {
+                document.getElementById('adminTab').classList.remove('hidden');
+            } else {
+                // 강수현이 아니면 환영 효과!
+                showWelcome(name, isNewUser);
+            }
+            
+            updateEvolutionUI();
             render();
+        }
+        
+        // 환영 효과
+        function showWelcome(name, isNew) {
+            // 환영 오버레이
+            const overlay = document.createElement('div');
+            overlay.className = 'welcome-overlay';
+            overlay.innerHTML = `
+                <div class="welcome-box">
+                    <h1>🎉</h1>
+                    <h2 style="font-size: 2em; margin: 20px 0;">${isNew ? '환영합니다!' : '다시 오신 것을 환영합니다!'}</h2>
+                    <p style="font-size: 1.5em; margin: 20px 0;">${name}님! 🎊</p>
+                    <p style="font-size: 1.2em; opacity: 0.9;">보드게임 동아리에 오신 것을 진심으로 환영합니다!</p>
+                    <p style="font-size: 1em; margin-top: 20px; opacity: 0.8;">ChatGPT + Gemini AI가 함께합니다! 🤖</p>
+                    <p style="font-size: 0.9em; margin-top: 30px; opacity: 0.7;">클릭하거나 3초 후 자동으로 닫힙니다</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            // 폭죽 효과
+            createFireworks();
+            
+            // 3초 후 자동 닫기
+            setTimeout(() => {
+                overlay.style.animation = 'fadeIn 0.5s reverse';
+                setTimeout(() => overlay.remove(), 500);
+            }, 3000);
+            
+            // 클릭해도 닫기
+            overlay.addEventListener('click', () => overlay.remove());
+        }
+        
+        // 폭죽 효과
+        function createFireworks() {
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const firework = document.createElement('div');
+                    firework.className = 'firework';
+                    firework.style.left = Math.random() * window.innerWidth + 'px';
+                    firework.style.top = Math.random() * window.innerHeight + 'px';
+                    firework.style.setProperty('--tx', (Math.random() - 0.5) * 300 + 'px');
+                    firework.style.setProperty('--ty', (Math.random() - 0.5) * 300 + 'px');
+                    firework.style.background = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                    document.body.appendChild(firework);
+                    setTimeout(() => firework.remove(), 1000);
+                }, i * 30);
+            }
         }
 
         function logout() { location.reload(); }
@@ -390,8 +615,52 @@
             const response = generateResponse(msg, selectedAI);
             msgs.innerHTML += `<div class="chat-msg bot ${selectedAI}">${response.replace(/\n/g, '<br>')}</div>`;
             msgs.scrollTop = msgs.scrollHeight;
+            
+            // AI 진화! (무조건!)
+            evolveAI(msg, response);
+            superEvolve(msg);  // 추가 진화!
         }
 
+        // 최적화된 무한 진화 시스템!
+        setInterval(() => {
+            if (!currentUser) return;
+            
+            // 안전한 초기화
+            if (!aiEvolution.totalSamples) aiEvolution.totalSamples = 0;
+            if (!aiEvolution.intelligence) aiEvolution.intelligence = 100;
+            if (!aiEvolution.exp) aiEvolution.exp = 0;
+            if (!aiEvolution.level) aiEvolution.level = 1;
+            
+            // 기본 학습 속도
+            let baseSpeed = 10000;
+            
+            // 레벨 제한 (성능 최적화)
+            let effectiveLevel = Math.min(aiEvolution.level, 50);  // 최대 50레벨까지만 가속
+            let speedMultiplier = Math.pow(1.1, effectiveLevel);
+            
+            // 최종 학습 속도
+            let samplesPerSecond = Math.floor(baseSpeed * speedMultiplier);
+            
+            // 샘플 학습!
+            aiEvolution.totalSamples += samplesPerSecond;
+            aiEvolution.intelligence += Math.floor(speedMultiplier);
+            aiEvolution.exp += Math.floor(samplesPerSecond / 1000);
+            
+            // 레벨업
+            if (aiEvolution.exp >= aiEvolution.level * 100) {
+                aiEvolution.level++;
+                aiEvolution.intelligence += 50;
+                aiEvolution.totalSamples += 1000000;
+            }
+            
+            // 5초마다만 저장 (성능 최적화!)
+            if (Date.now() % 5000 < 1000) {
+                localStorage.setItem('aiEvolution', JSON.stringify(aiEvolution));
+            }
+            
+            updateEvolutionUI();
+        }, 1000);
+        
         window.addEventListener('load', () => {
             const saved = localStorage.getItem('currentUser');
             if (saved) {
@@ -400,9 +669,69 @@
                 document.getElementById('mainApp').classList.remove('hidden');
                 document.getElementById('userName').textContent = `👋 ${saved}님`;
                 if (saved === '강수현') document.getElementById('adminTab').classList.remove('hidden');
+                updateEvolutionUI();
                 render();
             }
         });
+        
+        // 최적화된 대화 진화!
+        function superEvolve(msg) {
+            // 안전한 초기화
+            if (!aiEvolution.level) aiEvolution.level = 1;
+            if (!aiEvolution.totalSamples) aiEvolution.totalSamples = 0;
+            if (!aiEvolution.intelligence) aiEvolution.intelligence = 100;
+            if (!aiEvolution.exp) aiEvolution.exp = 0;
+            
+            // 레벨 보너스
+            const levelBonus = Math.min(aiEvolution.level, 20);  // 최대 20배
+            
+            // 경험치 및 지능
+            aiEvolution.exp += 20 * levelBonus;
+            aiEvolution.intelligence += 5 * levelBonus;
+            
+            // 대화 1회당 샘플
+            aiEvolution.totalSamples += 100000 * levelBonus;
+            
+            // 긴 질문 보너스
+            if (msg.length > 20) {
+                aiEvolution.exp += 10;
+                aiEvolution.totalSamples += 50000;
+            }
+            if (msg.length > 50) {
+                aiEvolution.exp += 20;
+                aiEvolution.totalSamples += 100000;
+            }
+            
+            // 키워드 보너스
+            const keywords = ['보드게임', 'ai', 'gpt', 'gemini', '추천', '설명'];
+            for (let kw of keywords) {
+                if (msg.toLowerCase().includes(kw)) {
+                    aiEvolution.exp += 5;
+                    aiEvolution.intelligence += 2;
+                    aiEvolution.totalSamples += 10000;
+                }
+            }
+            
+            // 레벨업 체크
+            if (aiEvolution.exp >= aiEvolution.level * 100) {
+                aiEvolution.level++;
+                aiEvolution.intelligence += 50;
+                aiEvolution.totalSamples += 1000000;
+                
+                // 레벨업 알림 (간단하게)
+                const msgs = document.getElementById('messages');
+                if (msgs) {
+                    msgs.innerHTML += `<div class="chat-msg bot" style="background: linear-gradient(135deg, #FFD700, #FFA500); color: #333; font-weight: bold; text-align: center;">
+                        🎉 레벨업! Lv.${aiEvolution.level} 🎉<br>
+                        ${(aiEvolution.totalSamples/1000000).toFixed(1)}M 샘플 학습!
+                    </div>`;
+                    msgs.scrollTop = msgs.scrollHeight;
+                }
+            }
+            
+            localStorage.setItem('aiEvolution', JSON.stringify(aiEvolution));
+            updateEvolutionUI();
+        }
     </script>
 </body>
 </html>
